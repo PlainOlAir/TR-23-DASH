@@ -28,7 +28,6 @@ float tclvl = 0;//#
 float lclvl = 0;//#
 float emlvl = 0;//#
 int clutch = 0; //#
-int nsats = 0; //#
 int killsw = 0; //#
 int pedpos = 0; //0.1%
 int brakep = 0; //psi
@@ -40,8 +39,8 @@ const int rpm_rng = rpm_max - rpm_min;
 const int rpm_step = (rpm_rng) / NUMPIXELS;
 
 //Brake Pressure
-const float brakep_max = 2500;
-const float brakep_min = 100;
+const float brakep_max = 700;
+const float brakep_min = 500;
 
 //Warning logic
 int warning_sleep = 30000;
@@ -51,6 +50,7 @@ bool warning = false;
 //Button logic
 int button_time = 0;
 int button_depress = 500;
+bool button_press = false;
 
 //General setup
 String endChar = String(char(0xff)) + String(char(0xff)) + String(char(0xff));
@@ -173,6 +173,11 @@ void loop() {
     switch (id) {
       case 0x50:
         killsw = (buf[1] * 256 + buf[0]);
+        if (killsw < 6000) {
+          killsw = 0;
+        } else if (killsw > 10000) {
+          killsw = 1;
+        }
         break;
       case 0x51:
         t = (buf[1] * 256 + buf[0]);
@@ -190,10 +195,7 @@ void loop() {
       case 0x53:
         rpm = (buf[1] * 256 + buf[0]);
         tc = (buf[5] * 256 + buf[4]);
-        //mil = (buf[7] * 256 + buf[6]);
-        break;
-      case 0x54:
-        nsats = (buf[7] * 256 + buf[6]);
+        mil = (buf[7] * 256 + buf[6]);
         break;
     }
   }
@@ -268,7 +270,7 @@ void loop() {
   }
 
   //Warnings
-    if (page == "race" && mil > 0 && (millis()-warntime) > warning_sleep) {
+    if (page == "race" && mil > 0 && ((millis()-warntime) > warning_sleep)) {
       Serial1.print("page ecuwarn" + endChar);
       warning = true;
       lastpage = page;
@@ -279,8 +281,14 @@ void loop() {
     }
 
   //Screen switch/Ack
-  if (analogRead(A2) >= 500 && millis() - button_time > button_depress) {
+  if (analogRead(A2) <= 500) {
+    button_press = false;
+  }
+  
+  if (analogRead(A2) >= 500 && (millis() - button_time > button_depress) && !button_press) {
+    
     button_time = millis();
+    button_press = true;
 
     if (page == "important") {
       page = "race";
@@ -291,12 +299,25 @@ void loop() {
       Serial1.print("page important");
       
     } else if (page == "ecuwarn") {
-      page = lastpage;
+      page = "ecuwarn"; //changed from lastpage
       warntime = millis();
-      Serial1.print("page " + lastpage);  
+      Serial1.print("page ecuwarn"); //changed from "page" + lastpage
+       
+    } else if (page == "munch") {
+      page = lastpage;
+      Serial1.print("page " + lastpage);
     }
     Serial1.print(endChar);
     delay(100);
+    
+  } /*else if (button_press = true && (millis() - button_time > 2000)) {
+    lastpage = page;
+    page = "munch"
+    Serial1.print("page munch" + endChar);*/
+  if (button_press = true && (millis() - button_time > 2000)) {
+    lastpage = page;
+    page = "munch";
+    Serial1.print("page munch" + endChar);
   }
 
   //Car state
