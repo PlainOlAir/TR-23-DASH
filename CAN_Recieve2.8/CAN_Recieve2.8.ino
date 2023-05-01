@@ -105,15 +105,15 @@ static void tach_LED(int rev) {
     if (millis() % 100 > 50) {
       for (int i = 0; i < 3; i++) {
         pixels.setPixelColor(i, pixels.Color(0, 255, 0));
-        pixels.setPixelColor(NUMPIXELS-1-i, pixels.Color(0, 255, 0));
+        pixels.setPixelColor(NUMPIXELS - 1 - i, pixels.Color(0, 255, 0));
       }
       for (int i = 3; i < 5; i++) {
         pixels.setPixelColor(i, pixels.Color(255, 255, 0));
-        pixels.setPixelColor(NUMPIXELS-1-i, pixels.Color(255, 255, 0));
+        pixels.setPixelColor(NUMPIXELS - 1 - i, pixels.Color(255, 255, 0));
       }
       for (int i = 5; i < 7; i++) {
         pixels.setPixelColor(i, pixels.Color(0, 0, 255));
-        pixels.setPixelColor(NUMPIXELS-1-i, pixels.Color(0, 0, 255));
+        pixels.setPixelColor(NUMPIXELS - 1 - i, pixels.Color(0, 0, 255));
       }
     } else {
       for (int i = 0; i < NUMPIXELS; i++) {
@@ -123,17 +123,21 @@ static void tach_LED(int rev) {
 
     //Below limit
   } else {
-    for (i = 0; i < NUMPIXELS; i++) {
+    for (i = 0; i < 7; i++) {
       if (i < current_step) {
         if (i < 3) {
           pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 255, 0));
         } else if (i >= 3 && i < 5) {
           pixels.setPixelColor(i, pixels.Color(255, 255, 0));
+          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(255, 255, 0));
         } else if (i >= 5) {
           pixels.setPixelColor(i, pixels.Color(0, 0, 255));
+          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 0, 255));
         }
-      } else {
+      } else if (i >= current_step) {
         pixels.setPixelColor(i, pixels.Color(0, 0, 0));
+        pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 0, 0));
       }
     }
   }
@@ -156,7 +160,7 @@ void setup() {
   delay(logotime);
   Serial1.print("page important" + endChar);
   page = "important";
-  
+
 }
 
 void loop() {
@@ -189,7 +193,7 @@ void loop() {
         fp = (buf[3] * 256 + buf[2]);
         pedpos = (buf[5] * 256 + buf[4]);
         brakep = (buf[7] * 256 + buf[6]);
-        pedpos = round(pedpos / 10.0);
+        pedpos = round(pedpos / 100.0);
         brakep = ((brakep - brakep_min) / (brakep_max - brakep_min)) * 100;
         break;
       case 0x53:
@@ -199,11 +203,7 @@ void loop() {
         break;
     }
   }
-  
-  tclvl = 10 - round(analogRead(A3)+1 / 102.4);
-  lclvl = 10 - round(analogRead(A1)+1 / 102.4);
-  emlvl = 10 - round(analogRead(A0)+1 / 102.4);
-  
+
   //Update values in each page
   if (page == "important") {
     Serial1.print("ecut.val=" + String(t) + endChar);
@@ -216,7 +216,7 @@ void loop() {
     Serial1.print("tclvl.val=" + String(int(tclvl)) + endChar);
     Serial1.print("lclvl.val=" + String(int(lclvl)) + endChar);
     Serial1.print("emlvl.val=" + String(int(emlvl)) + endChar);
-    
+
     if (mil >= 1) {
       Serial1.print("mil.bco=65535" + endChar + "mil.pco=63488" + endChar);
     } else {
@@ -234,7 +234,7 @@ void loop() {
     } else {
       Serial1.print("launch.bco=0" + endChar + "launch.pco=65535" + endChar);
     }
-    
+
   } else if (page == "race") {
 
     Serial1.print("ecut.val=" + String(t) + endChar);
@@ -245,9 +245,9 @@ void loop() {
     Serial1.print("tclvl.val=" + String(int(tclvl)) + endChar);
     Serial1.print("lclvl.val=" + String(int(lclvl)) + endChar);
     Serial1.print("emlvl.val=" + String(int(emlvl)) + endChar);
-    
+
     if (mil >= 1) {
-      Serial1.print("mil.bco=63488" + endChar + "mil.pco=63488" + endChar);
+      Serial1.print("mil.bco=65535" + endChar + "mil.pco=63488" + endChar);
     } else {
       Serial1.print("mil.bco=0" + endChar + "mil.pco=0" + endChar);
     }
@@ -270,25 +270,26 @@ void loop() {
   }
 
   //Warnings
-    if (page == "race" && mil > 0 && ((millis()-warntime) > warning_sleep)) {
-      Serial1.print("page ecuwarn" + endChar);
-      warning = true;
-      lastpage = page;
-      page = "ecuwarn";
-    } else if (page == "ecuwarn" && mil == 0) {
-      page = lastpage;
-      Serial1.print("page " + lastpage);
-    }
+  if (page == "race" && mil > 0 && ((millis() - warntime) > warning_sleep) && rpm > 1000) {
+    Serial1.print("page ecuwarn" + endChar);
+    warning = true;
+    lastpage = page;
+    page = "ecuwarn";
+  } else if (page == "ecuwarn" && mil == 0) {
+    page = lastpage;
+    Serial1.print("page " + lastpage);
+  }
+
+  if (page == "ecuwarn" && rpm <= 1000) {
+    page = lastpage;
+    Serial1.print("page " + lastpage);
+  }
 
   //Screen switch/Ack
-  if (analogRead(A2) <= 500) {
-    button_press = false;
-  }
-  
-  if (analogRead(A2) >= 500 && (millis() - button_time > button_depress) && !button_press) {
-    
+
+  if (analogRead(A2) >= 500 && (millis() - button_time > button_depress)) {
+
     button_time = millis();
-    button_press = true;
 
     if (page == "important") {
       page = "race";
@@ -297,27 +298,17 @@ void loop() {
     } else if (page == "race") {
       page = "important";
       Serial1.print("page important");
-      
+
     } else if (page == "ecuwarn") {
-      page = "ecuwarn"; //changed from lastpage
-      warntime = millis();
-      Serial1.print("page ecuwarn"); //changed from "page" + lastpage
-       
-    } else if (page == "munch") {
       page = lastpage;
+      warntime = millis();
       Serial1.print("page " + lastpage);
+
     }
+
     Serial1.print(endChar);
     delay(100);
-    
-  } /*else if (button_press = true && (millis() - button_time > 2000)) {
-    lastpage = page;
-    page = "munch"
-    Serial1.print("page munch" + endChar);*/
-  if (button_press = true && (millis() - button_time > 2000)) {
-    lastpage = page;
-    page = "munch";
-    Serial1.print("page munch" + endChar);
+
   }
 
   //Car state
@@ -329,8 +320,8 @@ void loop() {
     }
   }
 
-  //LEDsa
-  if (killsw == 1) {
+  //LED
+  if (killsw == 0) {
     off_LED();
   } else if (killsw != 0) {
     if (tc != 0) {
