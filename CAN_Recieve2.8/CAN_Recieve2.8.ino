@@ -1,4 +1,4 @@
-/*
+/*XCZVbb
     0x50 - Kill Sw[01]  N/O[234567]
     0x51 - Temp[01]     Volt[23]      Clutch[45]    N/O[67]
     0x52 - Oil P[01]    Fuel P[23]    APP[45]       N/O[67]
@@ -49,8 +49,14 @@ bool warning = false;
 
 //Button logic
 int button_time = 0;
+int hold_time = 0;
 int button_depress = 500;
-bool button_press = false;
+
+//Switch logid
+int switchThresh[10] = {0, 80, 160, 230, 300, 390, 470, 530, 650, 800};
+int switchDiff[2];
+int switchValues[3];
+int switchLevels[3];
 
 //General setup
 String endChar = String(char(0xff)) + String(char(0xff)) + String(char(0xff));
@@ -61,6 +67,7 @@ String diag1 = "GPS SIGNAL";
 String diag2 = "ENGINE TEMPERATURE";
 int diag = 0;
 int i = 0;
+int j = 0;
 int reftime = 0;
 const int diagnostictime = 3000;
 const int logotime = 4000;
@@ -127,17 +134,17 @@ static void tach_LED(int rev) {
       if (i < current_step) {
         if (i < 3) {
           pixels.setPixelColor(i, pixels.Color(0, 255, 0));
-          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 255, 0));
+          pixels.setPixelColor(NUMPIXELS - i - 1, pixels.Color(0, 255, 0));
         } else if (i >= 3 && i < 5) {
           pixels.setPixelColor(i, pixels.Color(255, 255, 0));
-          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(255, 255, 0));
+          pixels.setPixelColor(NUMPIXELS - i - 1, pixels.Color(255, 255, 0));
         } else if (i >= 5) {
           pixels.setPixelColor(i, pixels.Color(0, 0, 255));
-          pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 0, 255));
+          pixels.setPixelColor(NUMPIXELS - i - 1, pixels.Color(0, 0, 255));
         }
       } else if (i >= current_step) {
         pixels.setPixelColor(i, pixels.Color(0, 0, 0));
-        pixels.setPixelColor(NUMPIXELS-i-1, pixels.Color(0, 0, 0));
+        pixels.setPixelColor(NUMPIXELS - i - 1, pixels.Color(0, 0, 0));
       }
     }
   }
@@ -203,6 +210,25 @@ void loop() {
         break;
     }
   }
+
+  switchValues[0] = analogRead(A1);
+  switchValues[1] = analogRead(A0);
+  switchValues[2] = analogRead(A3);
+  
+  for (i = 0; i < 3; i++) {
+    switchDiff[1] = 3000;
+    for (j = 0; j < 10; j++) {
+      switchDiff[0] = abs(switchThresh[j] - switchValues[i]);
+      if (switchDiff[0] < switchDiff[1]) {
+        switchLevels[i] = j;
+        switchDiff[1] = switchDiff[0];
+      }
+    }
+  }
+  
+  lclvl = 9 - switchLevels[0];
+  tclvl = 9 - switchLevels[1];
+  emlvl = 9 - switchLevels[2];
 
   //Update values in each page
   if (page == "important") {
@@ -290,6 +316,7 @@ void loop() {
   if (analogRead(A2) >= 500 && (millis() - button_time > button_depress)) {
 
     button_time = millis();
+    hold_time = millis();
 
     if (page == "important") {
       page = "race";
@@ -303,12 +330,25 @@ void loop() {
       page = lastpage;
       warntime = millis();
       Serial1.print("page " + lastpage);
-
+      
+    } else if (page == "munch") {
+      page = "important";
+      Serial1.print("page important");
     }
 
     Serial1.print(endChar);
     delay(100);
 
+  } else if (analogRead(A2) >= 500 && millis() - hold_time > 2000) {
+    hold_time = millis();
+    button_time = millis();
+    
+    page = "munch";
+    Serial1.print("page munch" + endChar);
+    delay(100);
+    
+  } else if (analogRead(A2) >= 500 && millis() - button_time < button_depress) {
+    button_time = millis();
   }
 
   //Car state
