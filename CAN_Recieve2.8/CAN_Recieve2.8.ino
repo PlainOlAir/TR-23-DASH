@@ -230,6 +230,9 @@ void loop() {
   tclvl = 9 - switchLevels[1];
   emlvl = 9 - switchLevels[2];
 
+  
+  
+
   //Update values in each page
   if (page == "important") {
     Serial1.print("ecut.val=" + String(t) + endChar);
