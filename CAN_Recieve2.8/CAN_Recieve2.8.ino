@@ -228,7 +228,7 @@ void loop() {
   
   lclvl = 7 - switchLevels[0];
   tclvl = 7 - switchLevels[1];
-  emlvl = 7 - switchLevels[2];
+  emlvl = 8 - switchLevels[2];
 
   
   
