@@ -39,8 +39,8 @@ const int rpm_rng = rpm_max - rpm_min;
 const int rpm_step = (rpm_rng) / NUMPIXELS;
 
 //Brake Pressure
-const float brakep_max = 700;
-const float brakep_min = 500;
+const float brakep_max = 1500;
+const float brakep_min = 550;
 
 //Warning logic
 int warning_sleep = 30000;
@@ -50,7 +50,7 @@ bool warning = false;
 //Button logic
 int button_time = 0;
 int hold_time = 0;
-int button_depress = 500;
+int button_depress = 200;
 
 //Switch logid
 int switchThresh[10] = {0, 80, 160, 230, 300, 390, 470, 530, 650, 800};
@@ -226,9 +226,9 @@ void loop() {
     }
   }
   
-  lclvl = 9 - switchLevels[0];
-  tclvl = 9 - switchLevels[1];
-  emlvl = 9 - switchLevels[2];
+  lclvl = 7 - switchLevels[0];
+  tclvl = 7 - switchLevels[1];
+  emlvl = 7 - switchLevels[2];
 
   
   
