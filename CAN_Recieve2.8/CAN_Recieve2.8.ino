@@ -33,8 +33,8 @@ int pedpos = 0; //0.1%
 int brakep = 0; //psi
 
 //RPM
-const int rpm_max = 9000;
-const int rpm_min = 1000;
+const int rpm_max = 9500;
+const int rpm_min = 6000;
 const int rpm_rng = rpm_max - rpm_min;
 const int rpm_step = (rpm_rng) / NUMPIXELS;
 
@@ -201,7 +201,7 @@ void loop() {
         pedpos = (buf[5] * 256 + buf[4]);
         brakep = (buf[7] * 256 + buf[6]);
         pedpos = round(pedpos / 100.0);
-        brakep = ((brakep - brakep_min) / (brakep_max - brakep_min)) * 100;
+        brakep = int((float((brakep - brakep_min)) / float((brakep_max - brakep_min))) * 100);
         break;
       case 0x53:
         rpm = (buf[1] * 256 + buf[0]);
